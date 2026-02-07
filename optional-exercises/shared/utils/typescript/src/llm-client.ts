@@ -25,6 +25,14 @@
  * ```
  */
 
+// Try to load a local .env file if dotenv is installed. This is optional and will be
+// skipped if the package isn't present. Using dynamic import avoids a hard dependency.
+try {
+  await import('dotenv/config');
+} catch {
+  // dotenv not installed; environment variables must be provided by the environment.
+}
+
 import Anthropic from '@anthropic-ai/sdk';
 import OpenAI from 'openai';
 import { GoogleGenerativeAI } from '@google/generative-ai';
@@ -48,9 +56,9 @@ export class GoogleAIClient extends LLMClient {
   private model: any;
   private _modelName: string;
 
-  constructor(model: string = 'gemini-1.5-flash') {
+  constructor(model: string = 'gemini-2.5-flash') {
     super();
-    const apiKey = process.env.GOOGLE_API_KEY;
+  const apiKey = process.env.GOOGLE_API_KEY;
 
     if (!apiKey) {
       throw new Error(
@@ -108,7 +116,7 @@ export class GroqClient extends LLMClient {
   private client: OpenAI;
   private _modelName: string;
 
-  constructor(model: string = 'llama-3.1-70b-versatile') {
+  constructor(model: string = 'llama-3.3-70b-versatile') {
     super();
     const apiKey = process.env.GROQ_API_KEY;
 
@@ -121,7 +129,7 @@ export class GroqClient extends LLMClient {
 
     this.client = new OpenAI({
       apiKey,
-      baseURL: 'https://api.groq.com/openai/v1'
+      baseURL: 'https://api.groq.com/openai/v1',
     });
     this._modelName = model;
   }
@@ -134,7 +142,7 @@ export class GroqClient extends LLMClient {
     const response = await this.client.chat.completions.create({
       model: this._modelName,
       messages: messages as any,
-      max_tokens: 4096
+      max_tokens: 4096,
     });
 
     return response.choices[0]?.message?.content || '';
@@ -264,7 +272,7 @@ export class OpenAIClient extends LLMClient {
 // FACTORY FUNCTIONS
 // =============================================================================
 
-type ProviderName = 'google' | 'groq' | 'ollama' | 'anthropic' | 'openai';
+export type ProviderName = 'google' | 'groq' | 'ollama' | 'anthropic' | 'openai';
 
 export function getLLMClient(
   provider: ProviderName = 'google',
@@ -285,15 +293,16 @@ export function getLLMClient(
    * ]);
    * ```
    */
-  const providers: Record<ProviderName, [typeof LLMClient, string]> = {
+  // Use a constructor signature so TypeScript knows these are concrete classes
+  const providers: Record<ProviderName, [new (model?: string) => LLMClient, string]> = {
     // FREE
-    google: [GoogleAIClient as any, 'gemini-1.5-flash'],
-    groq: [GroqClient as any, 'llama-3.1-70b-versatile'],
-    ollama: [OllamaClient as any, 'llama3.1:8b'],
+    google: [GoogleAIClient, 'gemini-2.5-flash'],
+    groq: [GroqClient, 'llama-3.3-70b-versatile'],
+    ollama: [OllamaClient, 'llama3.1:8b'],
 
     // PAID
-    anthropic: [AnthropicClient as any, 'claude-3-5-sonnet-20241022'],
-    openai: [OpenAIClient as any, 'gpt-4o']
+    anthropic: [AnthropicClient, 'claude-3-5-sonnet-20241022'],
+    openai: [OpenAIClient, 'gpt-4o']
   };
 
   if (!(provider in providers)) {
