@@ -7,7 +7,9 @@
 # Default: all
 # ============================================================================
 
-set -e
+# Do not exit on first error; we collect failures and show a summary.
+# This allows the script to run all checks and report a consolidated result.
+set +e
 
 # Colors
 RED='\033[0;31m'
@@ -20,6 +22,30 @@ NC='\033[0m' # No Color
 PASS=0
 FAIL=0
 WARN=0
+
+# Load .env if present (simple, safe parser: only KEY=VALUE lines, ignores comments)
+load_env_file() {
+    if [ -f ".env" ]; then
+        while IFS= read -r line || [ -n "$line" ]; do
+            # trim whitespace
+            line="$(echo "$line" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+            [ -z "$line" ] && continue
+            case "$line" in
+                \#*) continue;;
+            esac
+            # only parse lines that contain '='
+            if echo "$line" | grep -q "="; then
+                key="${line%%=*}"
+                val="${line#*=}"
+                # trim whitespace around key
+                key="$(echo "$key" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+                # remove surrounding quotes from val
+                val="$(echo "$val" | sed -e 's/^"//' -e 's/"$//' -e "s/^'//" -e "s/'$//")"
+                export "$key=$val"
+            fi
+        done < ".env"
+    fi
+}
 
 # Functions
 print_header() {
@@ -283,6 +309,9 @@ main() {
     echo "============================================"
     echo "  Agentic AI Training - Setup Verification  "
     echo "============================================"
+
+    # Load .env (if present) so API keys can be read from a local .env file
+    load_env_file
 
     MODE=${1:-all}
 
