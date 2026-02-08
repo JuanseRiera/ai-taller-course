@@ -6,7 +6,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, HttpUrl
-from typing import Optional
+from typing import Optional, List
 from contextlib import asynccontextmanager
 import logging
 
@@ -50,6 +50,9 @@ class URLRequest(BaseModel):
 class URLResponse(BaseModel):
     short_code: str
     short_url: str
+
+class URLInfo(URLResponse):
+    original_url: str
 
 def generate_short_code(length: int = 6) -> str:
     """Generate a random alphanumeric string."""
@@ -105,6 +108,26 @@ async def shorten_url(request: URLRequest, raw_request: Request):
         short_code=short_code,
         short_url=f"{base_url}/{short_code}"
     )
+
+@app.get("/urls", response_model=List[URLInfo])
+async def list_urls(request: Request, limit: int = 5, offset: int = 0):
+    base_url = str(request.base_url).rstrip("/")
+    
+    async with aiosqlite.connect(DB_PATH) as db:
+        cursor = await db.execute(
+            "SELECT original_url, short_code FROM urls ORDER BY id DESC LIMIT ? OFFSET ?",
+            (limit, offset)
+        )
+        rows = await cursor.fetchall()
+        
+    return [
+        URLInfo(
+            short_code=row[1],
+            short_url=f"{base_url}/{row[1]}",
+            original_url=row[0]
+        )
+        for row in rows
+    ]
 
 @app.get("/{short_code}")
 async def redirect_to_url(short_code: str):
