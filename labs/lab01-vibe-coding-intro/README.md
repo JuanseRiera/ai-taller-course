@@ -120,7 +120,7 @@ curl -I http://localhost:8000/abc123
 Create a simple Next.js 14 frontend for a URL shortener.
 
 Requirements:
-1. Single page with input field for URL
+1. Single page with input field for URL(required) and custom code (not required)
 2. Submit button that calls POST /api/shorten
 3. Display the shortened URL with copy button
 4. Show loading state during API call
@@ -130,6 +130,47 @@ Requirements:
 
 The API endpoint is: POST /api/shorten with body {"url": "..."}
 Returns: {"short_code": "...", "short_url": "..."}
+
+Folder for the frontend: @labs/lab01-vibe-coding-intro/frontend
+
+Here is more context:
+Backend Context: URL Shortener API
+Technology Stack:
+- Framework: FastAPI (Python)
+- Database: SQLite (file: urls.db) using aiosqlite for async operations.
+- Server: Uvicorn (running on http://localhost:8000)
+Core Endpoints:
+1.  POST /shorten
+    *   Purpose: Creates or retrieves a short URL.
+    *   Request Body:
+                {
+          url: https://example.com,
+          custom_code: optional-string 
+        }
+            *   Logic:
+        *   If the URL already exists in the DB, it returns the existing short_code (idempotent).
+        *   If the URL is new and custom_code is provided:
+            *   Checks for collision. If the code is taken, returns 400 Bad Request.
+            *   If available, creates the entry with the custom code.
+        *   If the URL is new and no custom_code is provided:
+            *   Generates a random 6-character alphanumeric code.
+    *   Response (200 OK):
+                {
+          short_code: abc123,
+          short_url: http://localhost:8000/abc123
+        }
+        
+2.  GET /{short_code}
+    *   Purpose: Redirects to the original URL.
+    *   Behavior: Returns 307 Temporary Redirect to the destination URL.
+    *   Error: Returns 404 Not Found if the code doesn't exist.
+3.  GET /health/status
+    *   Purpose: Basic connectivity check. Returns {"status": "healthy"}.
+CORS Configuration:
+- Currently enabled for all origins ("*") to facilitate frontend development.
+Validation:
+- Uses Pydantic HttpUrl to ensure only valid URLs are accepted.
+- Custom codes are handled as raw strings but must be unique.
 ```
 
 ### Step 5: Connect Frontend to Backend (10 min)
