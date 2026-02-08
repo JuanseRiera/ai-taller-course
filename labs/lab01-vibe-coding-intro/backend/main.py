@@ -2,6 +2,8 @@ import string
 import secrets
 import aiosqlite
 import sqlite3
+import os
+from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,7 +16,10 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-DB_PATH = "urls.db"
+# Load environment variables
+load_dotenv()
+
+DB_PATH = os.getenv("DATABASE_URL", "urls.db")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
