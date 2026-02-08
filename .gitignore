@@ -95,3 +95,6 @@ temp/
 *.pth
 *.onnx
 models/
+
+# Frontend
+.vercel
