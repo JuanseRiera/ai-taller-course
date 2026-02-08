@@ -7,9 +7,10 @@ import { ShortenedLink } from './lib/models';
 
 interface LinksTableClientProps {
   links: ShortenedLink[];
+  error?: string;
 }
 
-export const LinksTableClient: React.FC<LinksTableClientProps> = ({ links }) => {
+export const LinksTableClient: React.FC<LinksTableClientProps> = ({ links, error }) => {
   const [copiedLinkCode, setCopiedLinkCode] = useState<string | null>(null);
 
   const handleCopy = (text: string, code: string) => {
@@ -30,7 +31,13 @@ export const LinksTableClient: React.FC<LinksTableClientProps> = ({ links }) => 
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
-          {links.length === 0 ? (
+          {error ? (
+             <tr>
+              <td colSpan={4} className="px-6 py-10 text-center text-red-500">
+                {error}
+              </td>
+            </tr>
+          ) : links.length === 0 ? (
             <tr>
               <td colSpan={4} className="px-6 py-10 text-center text-gray-500">
                 No links created yet.
