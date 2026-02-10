@@ -730,7 +730,14 @@ Write a cache function.
 
 **Your Improved Version:**
 ```
-[Write your improved prompt here]
+> Role: Act as a Senior Backend Engineer.
+> Context: I am building a Node.js API that makes frequent calls to a slow external weather service.
+> Task: Write a thread-safe cache wrapper in TypeScript.
+> Requirements:
+> 1. Use an LRU (Least Recently Used) strategy with a max capacity of 100 items.
+> 2. Implement a TTL (Time-To-Live) of 5 minutes per entry.
+> 3. Provide get, set, and clear methods.
+> Output: Provide the implementation in a single file with clean documentation and a usage example.
 ```
 
 **Prompt 2: Code Review (Weak)**
@@ -747,7 +754,13 @@ def process(data):
 
 **Your Improved Version:**
 ```
-[Write your improved prompt here]
+> Role: Act as a Senior Python Developer specializing in performance optimization and clean code.
+> Context: This function is used in a data processing pipeline that handles millions of integers. It is currently a bottleneck.
+> Task: Review the provided process function for:
+> 1. Performance: Suggest more efficient ways to handle large datasets (e.g., list comprehensions or NumPy).
+> 2. Type Safety: Add Python type hints.
+> 3. Readability: Ensure it follows idiomatic Python (Pythonic) patterns.
+> Output: Provide the refactored code and a brief explanation of why your changes improve performance.
 ```
 
 **Prompt 3: Debugging (Weak)**
@@ -766,7 +779,26 @@ def merge_sorted(a, b):
 
 **Your Improved Version:**
 ```
-[Write your improved prompt here]
+> Role: Act as a Senior Software Engineer and Algorithm Specialist.
+> Task: Fix the provided Python function merge_sorted.
+>
+> Instructions:
+> 1. Step-by-Step Analysis: Before providing the code, analyze the logic of the while loop. Specifically, trace what happens to the lists a and b when a[0] < b[0] is true.
+> 2. Bug Identification: Explicitly state why the use of .pop() is causing the function to fail for sorted inputs.
+> 3. Reasoning: Explain the logic for the correct approach to maintain the O(n + m) complexity.
+> 4. Solution: Provide the corrected Python code.
+> 5. Verification: Provide 3 test cases, including one with lists of different lengths.
+>
+> Code to fix:
+> > def merge_sorted(a, b):
+>     result = []
+>     while a and b:
+>         if a[0] < b[0]:
+>             result.append(a.pop())
+>         else:
+>             result.append(b.pop())
+>     return result + a + b
+>
 ```
 
 ### Reference Solutions
