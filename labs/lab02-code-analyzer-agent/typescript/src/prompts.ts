@@ -14,7 +14,7 @@ The output MUST be a valid JSON object matching the following structure:
       "type": "Type of issue (e.g., 'security', 'performance', 'maintainability', 'bug')",
       "severity": "low" | "medium" | "high",
       "description": "Brief description of the issue (max 2 sentences)",
-      "line": optional number,
+      "line": optional number or null,
       "complexityScore": 1-10 (complexity of fixing this specific issue),
       "costBenefit": "low" | "medium" | "high" (benefit of fixing vs cost),
       "suggestion": "Actionable suggestion to fix the issue (max 2 sentences)"
@@ -56,7 +56,7 @@ The output MUST be a valid JSON object matching the following structure:
       "type": "security",
       "severity": "low" | "medium" | "high" | "critical",
       "description": "Brief description of the security issue (max 2 sentences)",
-      "line": optional number,
+      "line": optional number or null,
       "complexityScore": 1-10 (complexity of fixing this specific issue),
       "costBenefit": "low" | "medium" | "high" (benefit of fixing vs cost),
       "suggestion": "Actionable suggestion to fix the security issue (max 2 sentences)"
