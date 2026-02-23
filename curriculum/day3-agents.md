@@ -3641,6 +3641,55 @@ Typical iterations for a single file:
 Typical iterations for a project:
 ```
 
+### Solution 
+
+```markdown
+Code Migration Agent Design
+Agent Type
+x Hybrid (plan first, use ReAct for each step)
+Why: Python 2 to 3 migration involves both predictable syntax changes and unpredictable runtime behavior (especially regarding string encoding and division). A global Planning phase is necessary to map dependencies and prioritize modules. A ReAct loop is then used for each file to apply changes, analyze linter/test failures, and iteratively correct issues until the file passes verification.
+Required Tools
+1. Tool name: migration_utility
+   - Purpose: Executes automated refactoring tools like lib2to3, modernize, or futurize to apply baseline fixes.
+   - Parameters: file_path, fixer_set (optional list of specific rules to apply).
+2. Tool name: code_execution_sandbox
+   - Purpose: Runs the migrated code/tests in a Python 3 environment and captures stdout, stderr, and return codes.
+   - Parameters: command (e.g., pytest path/to/test), env_vars.
+3. Tool name: semantic_search
+   - Purpose: Identifies problematic Python 2 patterns that automated tools might miss (e.g., implicit relative imports, __builtin__ usage).
+   - Parameters: regex_pattern, include_glob.
+4. Tool name: dependency_analyzer
+   - Purpose: Generates a directed acyclic graph (DAG) of project imports to determine the migration order (leaf nodes first).
+   - Parameters: root_dir.
+Agent Flow
+1. Discovery & Planning: Analyze the project structure, generate a dependency graph, and identify "hotspot" files with complex legacy patterns.
+2. Scaffolding: Set up a Python 3 virtual environment and ensure existing tests can be discovered.
+3. Iterative Migration (per module):
+    - Apply automated transforms via migration_utility.
+    - Run linter (e.g., Ruff) to identify syntax or compatibility errors.
+    - ReAct Loop: If errors exist, read code -> identify fix -> edit code -> repeat.
+    - Run unit tests in the sandbox.
+    - If tests fail, use the error trace to perform targeted fixes.
+4. Integration Testing: Once all modules are migrated, run the full test suite.
+5. Final Review: Generate a diff report and a summary of manual changes for human approval.
+Memory Requirements
+- Short-term: Current file content, recent compiler/linter error messages, and the current sub-task status.
+- Long-term: Migration "knowledge base" (e.g., a mapping of Python 2 libraries to their Python 3 equivalents found during the process) and successful fix patterns reused across the project.
+- Working memory: The dependency graph and the list of files remaining to be migrated.
+Error Handling
+- Syntax errors: The agent uses a ReAct loop to feed the traceback back into the LLM, which applies an edit to resolve the syntax violation.
+- Ambiguous migration patterns: If the agent identifies multiple ways to migrate a pattern (e.g., str vs bytes ambiguity), it will flag the line with a TODO comment and pause to ask the user for clarification.
+- Unmigratable files: Files using deprecated C-extensions or abandoned third-party libraries are moved to a manual_review queue with a summary of the blocking issue.
+Verification Strategy
+1. Linting: Ensure 100% compliance with Python 3 syntax rules using ruff or pylint.
+2. Type Checking: (Optional) Use mypy to detect potential runtime type mismatches caused by string/bytes changes.
+3. Unit Testing: The primary source of truth. Tests must pass in Python 3 with equivalent coverage to the original Python 2 state.
+4. Regression Testing: Compare output logs of key functions between the original Python 2 execution and the new Python 3 execution where deterministic results are expected.
+Estimated Iterations
+- Typical iterations for a single file: 2–5 (Initial transform -> Lint fix -> Test fix -> Refine).
+- Typical iterations for a project: 10–20 + (Number of files * 3). Size and complexity of the dependency graph significantly impact this.
+```
+
 ---
 
 <a name="multi-agent"></a>
