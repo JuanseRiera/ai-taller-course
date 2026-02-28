@@ -1,94 +1,47 @@
-/**
- * Migration Workflow Agent - Hono API Application
- */
-
-import 'dotenv/config';
+import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
-import { serve } from '@hono/node-server';
-
-import { MigrationAgent } from './agent.js';
-import { createInitialState } from './state.js';
-import { getLLMClient, type LLMProvider } from './llm-client.js';
-import { MigrationRequestSchema, type MigrationResponse } from './types.js';
+import { runMigration } from './utils/pipeline.js';
+import { VerificationReport } from './types/migration.js';
 
 const app = new Hono();
 
-// CORS middleware
 app.use('/*', cors());
 
-// Initialize LLM client
-const provider = (process.env.LLM_PROVIDER || 'anthropic') as LLMProvider;
-const llm = getLLMClient(provider);
+const MigrateRequestSchema = z.object({
+  files: z.array(z.object({
+    path: z.string().min(1),
+    content: z.string().min(1)
+  })),
+  targetFramework: z.string()
+});
 
-/**
- * Run migration workflow
- */
-app.post('/migrate', zValidator('json', MigrationRequestSchema), async (c) => {
-  try {
-    const { source_framework, target_framework, files } = c.req.valid('json');
+app.post(
+  '/v1/migrate',
+  zValidator('json', MigrateRequestSchema),
+  async (c) => {
+    const { files, targetFramework } = c.req.valid('json');
 
-    const agent = new MigrationAgent(llm);
-    const initialState = createInitialState(
-      source_framework,
-      target_framework,
-      files
-    );
-
-    const result = await agent.run(initialState);
-
-    const response: MigrationResponse = {
-      success: result.errors.length === 0,
-      migrated_files: result.migratedFiles,
-      plan_executed: result.plan.map((s) => ({
-        id: s.id,
-        description: s.description,
-        status: s.status,
-      })),
-      verification: result.verificationResult || {},
-      errors: result.errors,
-    };
-
-    return c.json(response);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown error';
-    return c.json({ error: message }, 500);
+    try {
+      const result: VerificationReport = await runMigration(files, targetFramework);
+      return c.json(result);
+    } catch (error) {
+      console.error('Migration failed:', error);
+      return c.json({ error: 'Migration failed', details: error instanceof Error ? error.message : String(error) }, 500);
+    }
   }
+);
+
+app.get('/', (c) => {
+  return c.text('Migration Agent API is running. POST to /v1/migrate to start.');
 });
 
-/**
- * Health check endpoint
- */
-app.get('/health', (c) => {
-  return c.json({ status: 'healthy', provider });
-});
-
-/**
- * List supported frameworks
- */
-app.get('/frameworks', (c) => {
-  return c.json({
-    supported: [
-      { name: 'express', language: 'javascript' },
-      { name: 'fastapi', language: 'python' },
-      { name: 'flask', language: 'python' },
-      { name: 'django', language: 'python' },
-      { name: 'nestjs', language: 'typescript' },
-      { name: 'hono', language: 'typescript' },
-    ],
-  });
-});
-
-// Start server
-const port = parseInt(process.env.PORT || '8000', 10);
-
-console.log(`Migration Workflow Agent starting on port ${port}...`);
-console.log(`Using LLM provider: ${provider}`);
+const port = 3000;
+console.log(`Server is running on port ${port}`);
 
 serve({
   fetch: app.fetch,
-  port,
+  port
 });
-
-export default app;
