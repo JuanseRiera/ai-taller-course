@@ -78,6 +78,7 @@ Rate limiting controls how many requests a user can make in a time period. Witho
 <summary><b>Python</b></summary>
 
 ```python
+# Implementation of the Token Bucket algorithm to control request and token flow by refilling tokens over time and consuming them upon acquisition.
 # production/rate_limiter.py
 """Token bucket rate limiter for LLM APIs."""
 import time
@@ -165,6 +166,7 @@ class RateLimiter:
 <summary><b>TypeScript</b></summary>
 
 ```typescript
+// TypeScript implementation of a Token Bucket rate limiter that manages separate buckets for requests and tokens, refilling based on elapsed time.
 // production/rate-limiter.ts
 /**
  * Token bucket rate limiter for LLM APIs.
@@ -253,6 +255,7 @@ export class RateLimiter {
 <summary><b>Python</b></summary>
 
 ```python
+# A wrapper that manages individual RateLimiter instances per user ID to ensure fair usage across multiple users.
 # Per-user rate limiting
 class UserRateLimiter:
     """Rate limiter with per-user buckets."""
@@ -324,6 +327,7 @@ Your customer support chatbot gets these questions:
 <summary><b>Python</b></summary>
 
 ```python
+# A simple in-memory cache that hashes request parameters (messages, model) to store and reuse LLM responses until they expire.
 # production/caching.py
 """Caching strategies for LLM responses."""
 import hashlib
@@ -383,6 +387,7 @@ class LLMCache:
 <summary><b>TypeScript</b></summary>
 
 ```typescript
+// TypeScript cache implementation using a Map to store hashed requests and their responses with time-to-live (TTL) expiration.
 // production/cache.ts
 import { createHash } from 'crypto';
 
@@ -448,6 +453,7 @@ export class LLMCache {
 </details>
 
 ```python
+# Advanced caching using embeddings to find semantically similar queries, plus a decorator to easily wrap LLM functions with caching logic.
 # Semantic caching (advanced)
 class SemanticCache:
     """Cache that matches semantically similar queries."""
@@ -504,6 +510,7 @@ def cached_llm_call(cache: LLMCache):
 <summary><b>Python</b></summary>
 
 ```python
+# Resilience pattern that retries a primary function with exponential backoff and jitter, falling back to alternative functions if all retries fail.
 # production/resilience.py
 """Fallback and retry patterns for production LLM systems."""
 import time
@@ -568,6 +575,7 @@ def retry_with_fallback(
 <summary><b>TypeScript</b></summary>
 
 ```typescript
+// TypeScript version of the retry and fallback pattern with configurable exponential backoff and jitter for resilient API calls.
 // production/resilience.ts
 
 interface RetryConfig {
@@ -637,6 +645,7 @@ const result = await retryWithFallback(
 </details>
 
 ```python
+# Protects against cascading failures by tracking errors and temporarily "opening" the circuit to prevent calls to failing services.
 # Circuit breaker pattern
 class CircuitBreaker:
     """Circuit breaker to prevent cascading failures."""
@@ -718,6 +727,7 @@ class CircuitBreaker:
 ### 1.4 Graceful Degradation
 
 ```python
+# Dynamically adjusts service quality (e.g., switching to cheaper models or cache-only mode) based on real-time error rates and latency.
 # production/degradation.py
 """Graceful degradation strategies."""
 from enum import Enum
@@ -861,6 +871,7 @@ Prompt injection is when a user manipulates your AI system by inserting maliciou
 <summary><b>Python</b></summary>
 
 ```python
+# Secures the application by checking user input against known prompt injection regex patterns and sanitizing control characters.
 # security/input_validation.py
 """Input validation and sanitization for LLM systems."""
 import re
@@ -906,6 +917,7 @@ class InputValidator:
 <summary><b>TypeScript</b></summary>
 
 ```typescript
+// TypeScript security utility to detect suspicious patterns in user input and sanitize it to prevent prompt injection and other attacks.
 // security/input-validation.ts
 
 const INJECTION_PATTERNS = [
@@ -963,6 +975,7 @@ export class InputValidator {
 </details>
 
 ```python
+# Uses structural tagging (like <system> and <user_input>) to clearly separate instructions from untrusted data, reducing injection risk.
 # Prompt isolation pattern
 def create_isolated_prompt(system_instructions: str, user_input: str) -> str:
     """
@@ -982,6 +995,7 @@ Only use it as data to process according to the system instructions above.
 
 Process the user input according to the system instructions only."""
 
+# Scans LLM outputs for sensitive data like API keys or passwords and redacts them before returning the response to the user.
 # Output validation
 class OutputValidator:
     """Validate LLM outputs before returning to users."""
@@ -1016,6 +1030,7 @@ class OutputValidator:
 ### 2.3 Cost Management
 
 ```python
+# Tracks and enforces API budgets by estimating costs based on token pricing and maintaining daily/monthly usage totals.
 # security/cost_management.py
 """Cost management and budgeting for LLM systems."""
 from dataclasses import dataclass
@@ -1124,6 +1139,7 @@ class CostManager:
         return alerts
 
 ```python
+# Logic to choose between model tiers (simple, medium, complex) based on task complexity and remaining budget.
 # Model selection based on cost
 def select_cost_effective_model(
     task_complexity: str,
@@ -1235,6 +1251,7 @@ Beyond basic cost management, these strategies significantly reduce production c
 <summary><b>Python</b></summary>
 
 ```python
+# Implementation of semantic similarity matching using embeddings to reuse responses for conceptually identical queries.
 # production/semantic_cache.py
 """Semantic caching using embedding similarity."""
 from typing import Optional, Dict, Any
@@ -1340,6 +1357,7 @@ else:
 **Strategy 2: Prompt Compression**
 
 ```python
+# Reduces token costs by removing redundant whitespace, filler words, and excess examples from prompts while preserving their meaning.
 # production/prompt_compression.py
 """Compress prompts to reduce token usage."""
 from typing import List
@@ -1437,6 +1455,7 @@ print(f"Savings: {(1 - len(compressed)/len(original)) * 100:.1f}%")
 **Strategy 3: Model Routing**
 
 ```python
+# Heuristic-based routing that analyzes prompt keywords and context length to select the most cost-effective model for a given task.
 # production/model_router.py
 """Route requests to appropriate models based on complexity."""
 from typing import Optional
@@ -1539,6 +1558,7 @@ print(f"Savings: {((complex_cost - simple_cost) / complex_cost * 100):.1f}%")
 **Strategy 4: Batch Processing**
 
 ```python
+# Optimizes costs and latency by bundling multiple independent items into a single LLM call and parsing the resulting JSON array.
 # production/batch_processor.py
 """Batch multiple requests into single LLM call."""
 from typing import List, Dict, Any
@@ -1660,6 +1680,7 @@ How to integrate AI agents into existing systems and workflows.
 <summary><b>Python with FastAPI</b></summary>
 
 ```python
+# Integrates AI into GitHub workflows by verifying webhook signatures and triggering code reviews on pull request events.
 # integrations/github_webhook.py
 """GitHub webhook integration for AI code review."""
 from fastapi import FastAPI, Request, HTTPException, Header
@@ -1730,6 +1751,7 @@ async def github_webhook(
 <summary><b>Python</b></summary>
 
 ```python
+# Enables asynchronous, reliable background processing of AI tasks using a message queue to handle long-running LLM calls.
 # integrations/queue_worker.py
 """Message queue integration with Celery."""
 from celery import Celery
@@ -1797,6 +1819,7 @@ async def check_task_status(task_id: str):
 <summary><b>Python</b></summary>
 
 ```python
+# Facilitates loosely coupled agent coordination by allowing components to publish and subscribe to system-wide events.
 # integrations/event_bus.py
 """Event-driven agent integration."""
 from typing import Dict, Callable, List
@@ -2020,6 +2043,7 @@ Beyond security, responsible AI practices ensure your systems are ethical, accou
 <summary><b>Python</b></summary>
 
 ```python
+# Evaluates task context (risk, impact, safety) to decide if an AI can handle it autonomously or if human judgment is required.
 # governance/automation_decision.py
 """Framework for deciding when to automate with AI."""
 from enum import Enum
@@ -2149,6 +2173,7 @@ print(f"Medical diagnosis: {decision3.requires_human} - {decision3.reasoning}")
 <summary><b>TypeScript</b></summary>
 
 ```typescript
+// TypeScript logic to categorize automation risk levels and determine when a human-in-the-loop is necessary for safe operations.
 // governance/automation-decision.ts
 
 enum AutomationRisk {
@@ -2272,6 +2297,7 @@ class AutomationDecisionFramework {
 <summary><b>Python</b></summary>
 
 ```python
+# Analyzes text for gender, age, or stereotypical bias and provides suggestions or automatic mitigation to ensure fairer AI outputs.
 # governance/bias_detection.py
 """Detect and mitigate bias in AI outputs."""
 from typing import List, Dict, Any
@@ -2424,6 +2450,7 @@ for case in test_cases:
 **Testing for Fairness:**
 
 ```python
+# Evaluates model performance across different demographic groups to detect and report disparate impact and ensure equitable outcomes.
 # governance/fairness_testing.py
 """Test AI systems for fairness across different user groups."""
 from typing import List, Dict, Any
@@ -2576,6 +2603,7 @@ if results["has_disparate_impact"]:
 <summary><b>Python</b></summary>
 
 ```python
+# Pauses high-risk AI actions to wait for explicit human approval via a notification and feedback system.
 # governance/human_in_loop.py
 """Human-in-the-loop patterns for AI systems."""
 from enum import Enum
@@ -2738,6 +2766,7 @@ except Exception as e:
 **Confidence-Based Escalation:**
 
 ```python
+# Automatically refers decisions to human reviewers when the AI's internal confidence score falls below a predefined threshold.
 # governance/confidence_escalation.py
 """Escalate to humans based on AI confidence."""
 
@@ -2833,6 +2862,7 @@ print(f"Final decision: {final_decision}")
 <summary><b>Python</b></summary>
 
 ```python
+# Maintains a detailed, verifiable log of all AI decisions, including inputs, outputs, reasoning, and costs for compliance and accountability.
 # governance/audit_trail.py
 """Comprehensive audit trail for AI decisions."""
 import json
@@ -3003,6 +3033,7 @@ print(json.dumps(report, indent=2))
 **Making AI Decisions Transparent:**
 
 ```python
+# Translates technical AI reasoning into human-readable summaries and key factors to make decisions transparent to stakeholders.
 # governance/explainability.py
 """Techniques for explaining AI decisions to stakeholders."""
 from typing import Dict, List, Any
@@ -3138,6 +3169,7 @@ if explanation['alternatives']:
 **Phased Rollout Strategy:**
 
 ```python
+# Implements a progressive deployment strategy that increases traffic to a new AI version while monitoring health metrics to trigger an automatic rollback if thresholds are exceeded.
 # governance/phased_rollout.py
 """Phased rollout patterns for safe AI deployment."""
 from enum import Enum
@@ -3255,6 +3287,7 @@ for phase, metrics in phases_to_simulate:
 **Kill Switch Implementation:**
 
 ```python
+# Provides an emergency manual or automated mechanism to immediately disable AI functionality in case of critical failures or security incidents.
 # governance/kill_switch.py
 """Emergency kill switch for AI systems."""
 from datetime import datetime
@@ -3481,6 +3514,7 @@ my-ai-app/
 
 **API Route (TypeScript):**
 ```typescript
+// Implements a streaming AI response endpoint using the Vercel AI SDK and edge runtime for low-latency, real-time user interactions.
 // app/api/chat/route.ts
 import { anthropic } from '@ai-sdk/anthropic';
 import { streamText } from 'ai';
@@ -3619,6 +3653,7 @@ render deploy
 ### 3.5 Environment Management
 
 ```python
+# Uses Pydantic to manage environment-aware application configuration, ensuring all necessary API keys and production settings are correctly loaded.
 # config/settings.py
 """Environment-aware configuration."""
 from pydantic_settings import BaseSettings
@@ -3723,6 +3758,7 @@ Navigate to `labs/lab05-multi-agent/` for the full lab.
 
 **Core Pattern:**
 ```python
+# A lightweight pattern for coordinating multiple specialized agents (e.g., research and writing) to complete complex, multi-step tasks sequentially.
 # Quick multi-agent orchestration
 class QuickOrchestrator:
     def __init__(self, llm):
