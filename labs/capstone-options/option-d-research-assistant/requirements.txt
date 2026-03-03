@@ -1,0 +1,9 @@
+pyautogen>=0.2.0
+fastapi>=0.109.0
+uvicorn>=0.27.0
+google-generativeai>=0.3.2
+python-dotenv>=1.0.0
+# Extra dependencies required by autogen for Gemini
+Pillow>=10.0.0
+jsonschema>=4.0.0
+google-cloud-aiplatform>=1.38.0
