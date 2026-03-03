@@ -1,12 +1,37 @@
+import { useState } from "react";
 import Markdown from "react-markdown";
-import { Download, Check, Share2 } from "lucide-react";
+import { Download, Check, Copy } from "lucide-react";
 
 interface ReportViewProps {
   finalReport: string | null;
 }
 
 export function ReportView({ finalReport }: ReportViewProps) {
+  const [copied, setCopied] = useState(false);
+
   if (!finalReport) return null;
+
+  const handleDownload = () => {
+    const blob = new Blob([finalReport], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "research-report.md";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(finalReport);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy text: ", err);
+    }
+  };
 
   return (
     <div className="w-full max-w-4xl mx-auto animate-in fade-in zoom-in duration-300">
@@ -16,13 +41,32 @@ export function ReportView({ finalReport }: ReportViewProps) {
           Research Complete
         </h2>
         <div className="flex gap-2">
-          <button className="inline-flex items-center gap-2 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50">
+          <button
+            onClick={handleDownload}
+            className="inline-flex items-center gap-2 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-sm ring-1 ring-inset ring-gray-300 hover:bg-gray-50 transition-colors"
+          >
             <Download className="h-4 w-4 text-gray-500" />
             Download
           </button>
-          <button className="inline-flex items-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600">
-            <Share2 className="h-4 w-4" />
-            Share
+          <button
+            onClick={handleCopy}
+            className={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold shadow-sm transition-all duration-200 ${
+              copied
+                ? "bg-green-600 text-white"
+                : "bg-blue-600 text-white hover:bg-blue-500"
+            }`}
+          >
+            {copied ? (
+              <>
+                <Check className="h-4 w-4" />
+                Copied!
+              </>
+            ) : (
+              <>
+                <Copy className="h-4 w-4" />
+                Copy
+              </>
+            )}
           </button>
         </div>
       </div>
