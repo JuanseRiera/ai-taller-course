@@ -26,10 +26,15 @@ class ResearchOrchestrator:
         # 1. Emit 'completed' event for the previous speaker
         if last_speaker and last_speaker.name not in ["User", "chat_manager"]:
             try:
-                self.message_queue.put_nowait({
-                    "type": "progress",
-                    "message": f"{last_speaker.name} has completed their step."
-                })
+                last_msg = groupchat.messages[-1]
+                content = last_msg.get("content", "")
+                # Only send if content is substantial
+                if content and len(content) > 10:
+                     self.message_queue.put_nowait({
+                        "type": "progress",
+                        "message": f"{last_speaker.name} has completed their step.",
+                        "preview": content[:500] + "..." if len(content) > 500 else content
+                    })
             except Exception:
                 pass
 

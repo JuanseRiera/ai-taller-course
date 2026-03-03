@@ -61,7 +61,7 @@ The stream yields JSON events:
     {"type": "progress", "message": "Researcher has started gathering information..."}
     ```
     ```json
-    {"type": "progress", "message": "Researcher has completed their step."}
+    {"type": "progress", "message": "Researcher has completed their step.", "preview": "Partial content..."}
     ```
 
 2.  **Final Result**:
