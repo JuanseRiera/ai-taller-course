@@ -80,3 +80,52 @@ def test_state_transition_supervisor_json_terminates(orchestrator):
 
     next_agent = orchestrator._state_transition(last_speaker, groupchat)
     assert next_agent is None
+
+
+def test_state_transition_invalid_plan_falls_back(orchestrator):
+    groupchat = FakeGroupChat(
+        agents=[],
+        messages=[{"name": "Supervisor", "content": "PLAN: Ghost -> Phantom"}],
+        max_round=5,
+        speaker_selection_method=None,
+    )
+    last_speaker = SimpleNamespace(name="Supervisor")
+
+    next_agent = orchestrator._state_transition(last_speaker, groupchat)
+
+    assert next_agent.name == "Supervisor"
+    assert orchestrator.current_plan == []
+    assert orchestrator.plan_index == -1
+
+
+def test_state_transition_returns_none_when_no_iterations_left(orchestrator):
+    orchestrator.request.max_iterations = 1
+    groupchat = FakeGroupChat(
+        agents=[],
+        messages=[{"name": "Researcher", "content": "Some work"}],
+        max_round=5,
+        speaker_selection_method=None,
+    )
+    last_speaker = SimpleNamespace(name="Supervisor")
+
+    next_agent = orchestrator._state_transition(last_speaker, groupchat)
+
+    assert next_agent is None
+
+
+def test_state_transition_enqueues_progress_event(orchestrator):
+    long_content = "x" * 60
+    groupchat = FakeGroupChat(
+        agents=[],
+        messages=[{"name": "Writer", "content": long_content}],
+        max_round=5,
+        speaker_selection_method=None,
+    )
+    last_speaker = SimpleNamespace(name="Writer")
+
+    orchestrator.message_queue = build_orchestrator().message_queue
+    orchestrator._state_transition(last_speaker, groupchat)
+
+    progress = orchestrator.message_queue.get_nowait()
+    assert progress["type"] == "progress"
+    assert "Writer has completed" in progress["message"]
