@@ -17,12 +17,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+import logging
+from .utils.logger import get_logger
+
+logger = get_logger(__name__)
+
 @app.post("/research")
 async def research(request: ResearchRequest):
     """
     Starts a research session with orchestrated agents.
     Returns a stream of agent interactions and the final report.
     """
+    logger.info(f"Received research request: {request.question[:50]}... (Timeout: {request.timeout}s)")
     try:
         orchestrator = ResearchOrchestrator(request)
         
@@ -31,6 +37,7 @@ async def research(request: ResearchRequest):
             media_type="text/event-stream"
         )
     except Exception as e:
+        logger.error(f"Failed to start research: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/health")

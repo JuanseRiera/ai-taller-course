@@ -20,7 +20,12 @@ class SupervisorAgent(AssistantAgent):
     (You can also add a brief explanation on subsequent lines of why you chose this plan or instructions for the agents)
     
     MODE 2: FINAL SYNTHESIS
-    When the final review is approved ("APPROVE"), OR when your budget is exhausted (0 functional iterations remaining), compile the final report into a structured JSON object and do NOT output a "PLAN:".
+    When the final review is approved ("APPROVE"), OR when your budget is exhausted (0 functional iterations remaining), OR when a fatal SYSTEM ALERT demands immediate finalization, compile the final report into a structured JSON object and do NOT output a "PLAN:".
+    
+    CRITICAL ALERT HANDLING:
+    If you receive a [SYSTEM ALERT] stating an agent failed or a timeout is approaching, you must either:
+    - Provide a NEW PLAN to bypass the failing agent if time/budget permits.
+    - IMMEDIATELY finalize the report as "draft" if the alert dictates there is no time left.
     
     Output Format for Final Step:
     Strictly output valid JSON with the following schema:

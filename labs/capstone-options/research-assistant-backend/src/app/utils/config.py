@@ -1,6 +1,5 @@
 import os
 from dotenv import load_dotenv
-import google.generativeai as genai
 
 load_dotenv()
 
@@ -16,15 +15,16 @@ class Config:
         
         # Configure the genai library (though AutoGen might handle this differently depending on version,
         # it's good practice to have it ready or use it for direct calls if needed)
-        genai.configure(api_key=Config.GOOGLE_API_KEY)
+        # genai.configure(api_key=Config.GOOGLE_API_KEY) # Not used directly here
 
         return {
             "config_list": [
                 {
-                    "model": "gemini-2.5-flash", # Using flash for speed/cost in this demo, or pro
+                    "model": Config.MODEL_NAME,
                     "api_key": Config.GOOGLE_API_KEY,
                     "api_type": "google"
                 }
             ],
             "temperature": 0.7,
+            "timeout": 120
         }

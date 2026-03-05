@@ -48,6 +48,13 @@ sequenceDiagram
 - **Budget Awareness**: The Supervisor actively manages the `max_iterations`. If the budget is low (e.g., `2`), it will skip optional agents (like the Reviewer) and output a shorter plan (e.g., `PLAN: Researcher -> Writer`) to ensure a draft is completed.
 - **Auto-Execution**: Once a plan is set, the Orchestrator routes messages between functional agents automatically, saving time and LLM costs by skipping redundant Supervisor checks.
 
+### Robustness and Reliability
+- **Session Timeouts**: Each research session has a configurable `timeout` (default 300 seconds). If the session exceeds this, the system enters "Salvage Mode." The Supervisor attempts to compile a "draft" report from partial findings, ensuring no work is completely lost.
+- **Intelligent Retries**: If any functional agent (Researcher, Writer, Reviewer) returns an empty, incomplete, or error-like response, the Orchestrator automatically retries that agent's turn once. If the second attempt also fails, the Supervisor is alerted to make a new plan or finalize a draft.
+- **Comprehensive Logging**: A standardized logging system (using Python's `logging` module) is integrated. Every key event, retry, timeout, and error is logged with context for full traceability and easier debugging.
+- **LLM API Resilience**: The underlying LLM calls (Gemini API) are configured with `max_retries` and `timeout` settings to handle transient network issues or rate-limiting gracefully.
+- **Client Disconnect Handling**: If a client disconnects during an active streaming session, the Orchestrator detects the cancellation and terminates the background AI tasks to prevent unnecessary API costs.
+
 ## Prerequisites
 
 - Python 3.9+
@@ -87,7 +94,8 @@ Starts a research session. Returns a Server-Sent Events (SSE) stream.
   "question": "Research topic here",
   "depth": "brief" | "detailed" | "technical",
   "max_iterations": 5,
-  "report_format": "essay" | "bullet_points" | "table"
+  "report_format": "essay" | "bullet_points" | "table",
+  "timeout": 300
 }
 ```
 

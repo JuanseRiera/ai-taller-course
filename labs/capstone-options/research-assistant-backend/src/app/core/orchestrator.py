@@ -1,12 +1,16 @@
 import asyncio
 import json
-from typing import AsyncGenerator, Dict, Any, List, Union, Callable
-from autogen import GroupChat, GroupChatManager, Agent, AssistantAgent, UserProxyAgent, ConversableAgent
+import asyncio
+from typing import Dict, Any, Union, List, AsyncGenerator
+from autogen import GroupChat, GroupChatManager, Agent, AssistantAgent, UserProxyAgent
 from ..agents.factory import AgentFactory
 from ..utils.config import Config
+from ..utils.logger import get_logger
 from .schemas import ResearchRequest
 from .workflow_config import AGENT_REGISTRY
 import re
+
+logger = get_logger(__name__)
 
 class ResearchOrchestrator:
     def __init__(self, request: ResearchRequest):
@@ -21,6 +25,9 @@ class ResearchOrchestrator:
         self.groupchat = None # Store reference to access history later
         self.current_plan = []
         self.plan_index = -1
+        self.retry_tracker = {} # Track retries per agent
+        self.salvage_mode = False # Flag for timeout handling
+        self.last_failure_alert = "" # Pass messages to Supervisor
 
     def _state_transition(self, last_speaker: Agent, groupchat: GroupChat) -> Union[Agent, str, None]:
         """
@@ -94,12 +101,42 @@ class ResearchOrchestrator:
             # A functional agent spoke
             content = messages[-1].get("content", "")
             
-            # Smart Interrupts
+            # Detect Empty or Failure Responses
+            is_empty_or_failed = (not content or 
+                                  len(content.strip()) < 20 or 
+                                  "don't know" in content.lower() or 
+                                  "cannot fulfill" in content.lower() or
+                                  "i cannot provide" in content.lower())
+            
+            # Smart Interrupts & Retries
             if "APPROVE" in content or "REJECT" in content:
                 self.current_plan = [] # Plan interrupted
                 self.plan_index = -1
                 next_agent = self.agents_dict["supervisor"]
+            elif is_empty_or_failed:
+                agent_name = last_speaker.name
+                retries = self.retry_tracker.get(agent_name, 0)
+                if retries < 1:
+                    logger.warning(f"Agent {agent_name} failed. Triggering automatic retry ({retries+1}/1).")
+                    self.retry_tracker[agent_name] = retries + 1
+                    
+                    # Inject a system prompt to nudge the agent
+                    groupchat.messages.append({
+                        "name": "System",
+                        "role": "user",
+                        "content": f"[SYSTEM ALERT] Agent {agent_name}, your previous response was empty or indicated a failure. Please try again to fulfill your task."
+                    })
+                    next_agent = last_speaker
+                else:
+                    logger.error(f"Agent {agent_name} failed twice. Escalating to Supervisor for new plan.")
+                    self.retry_tracker[agent_name] = 0
+                    self.current_plan = [] # Interrupted
+                    self.plan_index = -1
+                    self.last_failure_alert = f"\n[ALERT: Agent {agent_name} failed twice to produce valid content. Provide a NEW PLAN to pivot, or finalize as draft.]"
+                    next_agent = self.agents_dict["supervisor"]
+                    
             else:
+                self.retry_tracker[last_speaker.name] = 0 # Reset on success
                 self.plan_index += 1
                 if self.plan_index < len(self.current_plan) and remaining > 0:
                     # Continue with the planned sequence automatically
@@ -123,7 +160,12 @@ class ResearchOrchestrator:
             status_prompt = f"\n\n[SYSTEM STATUS: You have {remaining} functional iterations remaining out of {self.request.max_iterations}.]"
             status_prompt += f"\n[AVAILABLE AGENTS:\n{registry_str}\n]"
             
-            if last_speaker.name not in ["User", "Supervisor"]:
+            if self.salvage_mode:
+                status_prompt += "\n[ALERT: SESSION TIMEOUT REACHED. You MUST output the final JSON report immediately based on current findings. Do not output PLAN:. Set status to 'draft'.]"
+            elif self.last_failure_alert:
+                status_prompt += self.last_failure_alert
+                self.last_failure_alert = "" # Clear after injecting
+            elif last_speaker.name not in ["User", "Supervisor"]:
                 content = messages[-1].get("content", "")
                 if "APPROVE" in content:
                     status_prompt += "\n[ALERT: The draft was APPROVED! You MUST output the final JSON report now. Set status to 'complete'.]"
@@ -190,29 +232,66 @@ class ResearchOrchestrator:
             llm_config=self.llm_config
         )
 
+        async def _run_chat_task():
+            try:
+                await asyncio.wait_for(
+                    user_proxy.a_initiate_chat(
+                        manager,
+                        message=f"Research Question: {self.request.question}"
+                    ),
+                    timeout=self.request.timeout
+                )
+            except asyncio.TimeoutError:
+                self.salvage_mode = True
+                logger.error(f"Session timeout reached ({self.request.timeout}s). Initiating Salvage Mode.")
+                
+                # Manually trigger Supervisor salvage outside GroupChat manager
+                if self.groupchat:
+                    self.groupchat.messages.append({
+                        "name": "System",
+                        "role": "user",
+                        "content": "[SYSTEM ALERT] Session timeout reached. You MUST output the final JSON report immediately based on current findings. Do not output PLAN:. Set status to 'draft'."
+                    })
+                    supervisor = self.agents_dict["supervisor"]
+                    try:
+                        # Quick sync generation to finish
+                        response = await supervisor.a_generate_reply(self.groupchat.messages)
+                        if response:
+                            # Append the JSON to messages so the parser can find it
+                            if isinstance(response, dict):
+                                response = response.get("content", str(response))
+                            self.groupchat.messages.append({"name": "Supervisor", "role": "assistant", "content": response})
+                    except Exception as e:
+                        logger.error(f"Salvage failed: {e}")
+
         # 3. Start the Chat (Run in background task)
-        task = asyncio.create_task(
-            user_proxy.a_initiate_chat(
-                manager,
-                message=f"Research Question: {self.request.question}"
-            )
-        )
+        task = asyncio.create_task(_run_chat_task())
 
         # 4. Stream from Queue
         while not task.done():
             try:
                 # Wait for new message or task completion
-                message = await asyncio.wait_for(self.message_queue.get(), timeout=0.5)
+                message = await asyncio.wait_for(self.message_queue.get(), timeout=1.0)
                 yield f"data: {json.dumps(message)}\n\n"
             except asyncio.TimeoutError:
                 continue
+            except asyncio.CancelledError:
+                logger.info("Client disconnected. Cancelling background task.")
+                task.cancel()
+                raise # Close stream
             except Exception as e:
+                logger.error(f"Error while streaming: {e}")
                 yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
                 break
         
         # Check for errors in task
-        if task.exception():
-             yield f"data: {json.dumps({'type': 'error', 'message': str(task.exception())})}\n\n"
+        try:
+            if not task.cancelled() and task.exception():
+                 yield f"data: {json.dumps({'type': 'error', 'message': str(task.exception())})}\n\n"
+        except asyncio.CancelledError:
+            pass
+        except Exception as e:
+            logger.error(f"Error checking task exception: {e}")
         
         # Flush remaining messages
         while not self.message_queue.empty():
