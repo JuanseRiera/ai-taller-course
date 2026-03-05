@@ -19,6 +19,7 @@ A professional, minimalist "Lab" style dashboard for an AI-driven research assis
 - **Icons**: [Lucide React](https://lucide.dev/)
 - **Markdown**: [react-markdown](https://github.com/remarkjs/react-markdown)
 - **SSE**: [@microsoft/fetch-event-source](https://github.com/Azure/fetch-event-source)
+- **Testing**: [Jest](https://jestjs.io/) + [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/)
 
 ## 📦 Installation
 
@@ -67,3 +68,38 @@ The frontend communicates with the backend using the following protocol:
 - `src/components`: UI components (Sidebar, ResearchForm, StreamingView, etc.).
 - `src/hooks`: Custom `useResearchStream` hook for state and SSE management.
 - `src/lib`: Types and utility functions.
+- `src/test`: Shared test factories for deterministic mock data.
+
+## ✅ Testing Architecture
+
+- **Runner**: Jest configured with `next/jest` in `jest.config.js`.
+- **Test environment**: `jsdom` with shared setup in `jest.setup.ts`.
+- **Test style**: Functional component tests and hook state-transition tests.
+- **Mock strategy**: Mock `@microsoft/fetch-event-source` directly for deterministic SSE behavior.
+- **Mock data pattern**: Factory functions in `src/test/factories.ts`.
+
+### Test file placement
+
+Tests live next to source files for discoverability:
+
+- `src/components/*.test.tsx`
+- `src/hooks/*.test.ts`
+- `src/lib/*.test.ts`
+
+### Mock data factories
+
+Use factories with overrides to keep tests concise and consistent:
+
+```ts
+import { createMockHistoryItem } from "@/test/factories";
+
+const item = createMockHistoryItem({ status: "draft", id: "draft-1" });
+```
+
+### Run tests
+
+```bash
+npm test
+npm run test:watch
+npm run test:coverage
+```
