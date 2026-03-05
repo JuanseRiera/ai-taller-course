@@ -15,7 +15,8 @@ export default function Dashboard() {
     history,
     startResearch,
     clearState,
-    loadHistoryItem
+    loadHistoryItem,
+    deleteHistoryItem,
   } = useResearchStream();
 
   return (
@@ -24,7 +25,8 @@ export default function Dashboard() {
         history={history}
         onSelect={loadHistoryItem}
         onNewResearch={clearState}
-        selectedId={state.status === "completed" ? undefined : undefined} // Ideally pass selected ID logic here
+        onDelete={deleteHistoryItem}
+        selectedId={state.id}
       />
 
       <main className="flex-1 ml-64 overflow-y-auto relative h-full">

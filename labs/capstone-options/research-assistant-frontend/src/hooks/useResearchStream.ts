@@ -13,6 +13,7 @@ const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/re
 
 export function useResearchStream() {
   const [state, setState] = useState<ResearchState>({
+    id: null,
     status: "idle",
     currentAgent: null,
     currentPreview: "",
@@ -44,8 +45,33 @@ export function useResearchStream() {
     });
   }, []);
 
+  const deleteHistoryItem = useCallback((id: string) => {
+    setHistory((prev) => {
+      const updated = prev.filter((item) => item.id !== id);
+      localStorage.setItem("research_history", JSON.stringify(updated));
+      return updated;
+    });
+
+    setState((prev) => {
+      if (prev.id === id) {
+        return {
+          id: null,
+          status: "idle",
+          currentAgent: null,
+          currentPreview: "",
+          finalReport: null,
+          reportStatus: null,
+          conversationHistory: [],
+          error: null,
+        };
+      }
+      return prev;
+    });
+  }, []);
+
   const clearState = useCallback(() => {
     setState({
+      id: null,
       status: "idle",
       currentAgent: null,
       currentPreview: "",
@@ -58,6 +84,7 @@ export function useResearchStream() {
 
   const loadHistoryItem = useCallback((item: HistoryItem) => {
     setState({
+      id: item.id,
       status: "completed",
       currentAgent: null,
       currentPreview: "",
@@ -70,6 +97,7 @@ export function useResearchStream() {
 
   const startResearch = useCallback(async (request: ResearchRequest) => {
     setState({
+      id: null,
       status: "streaming",
       currentAgent: "Orchestrator",
       currentPreview: "Initializing agents...",
@@ -124,6 +152,7 @@ export function useResearchStream() {
 
               setState((prev) => ({
                 ...prev,
+                id: historyItem.id,
                 status: "completed",
                 finalReport: result.data.final_report,
                 reportStatus: result.data.status,
@@ -162,5 +191,6 @@ export function useResearchStream() {
     startResearch,
     clearState,
     loadHistoryItem,
+    deleteHistoryItem,
   };
 }
