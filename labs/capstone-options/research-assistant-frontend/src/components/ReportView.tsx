@@ -1,5 +1,6 @@
 import { useState } from "react";
 import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { Download, Check, Copy, AlertCircle } from "lucide-react";
 
 interface ReportViewProps {
@@ -90,9 +91,9 @@ export function ReportView({ finalReport, reportStatus = "complete" }: ReportVie
         </div>
       </div>
       
-      <div className="bg-white px-8 py-10 shadow-lg ring-1 ring-gray-900/5 sm:rounded-3xl lg:px-12 xl:px-16 min-h-[500px]">
-        <article className="prose prose-slate prose-lg max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-a:text-blue-600 hover:prose-a:text-blue-500">
-          <Markdown>{finalReport}</Markdown>
+      <div className="bg-white px-8 py-10 shadow-lg ring-1 ring-gray-900/5 sm:rounded-3xl lg:px-12 xl:px-16 min-h-[500px] overflow-x-auto">
+        <article className="prose prose-slate prose-lg max-w-none prose-headings:font-semibold prose-headings:tracking-tight prose-a:text-blue-600 hover:prose-a:text-blue-500 prose-table:border-collapse prose-th:border prose-th:border-gray-300 prose-th:p-3 prose-th:bg-gray-50 prose-td:border prose-td:border-gray-300 prose-td:p-3">
+          <Markdown remarkPlugins={[remarkGfm]}>{finalReport}</Markdown>
         </article>
       </div>
     </div>
