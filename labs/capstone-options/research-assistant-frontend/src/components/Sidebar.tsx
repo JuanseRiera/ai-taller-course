@@ -45,7 +45,14 @@ export function Sidebar({ history, onSelect, onNewResearch, selectedId }: Sideba
                     : "text-gray-600 hover:bg-gray-100/50 hover:text-gray-900"
                 }`}
               >
-                <p className="truncate font-medium">{item.question}</p>
+                <div className="flex items-center justify-between">
+                  <p className="truncate font-medium flex-1 mr-2">{item.question}</p>
+                  {item.status === "draft" && (
+                    <span className="inline-flex items-center rounded-full bg-orange-100 px-1.5 py-0.5 text-[10px] font-medium text-orange-800 flex-shrink-0">
+                      Draft
+                    </span>
+                  )}
+                </div>
                 <p className="mt-0.5 text-xs text-gray-400">
                   {formatDistanceToNow(item.timestamp, { addSuffix: true })}
                 </p>

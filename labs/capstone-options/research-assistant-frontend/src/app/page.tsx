@@ -93,7 +93,7 @@ export default function Dashboard() {
                   </div>
                 ) : (
                   <>
-                    <ReportView finalReport={state.finalReport} />
+                    <ReportView finalReport={state.finalReport} reportStatus={state.reportStatus} />
                     <div className="mt-12 mx-auto max-w-4xl px-8">
                        <AgentLogs logs={state.conversationHistory} />
                     </div>

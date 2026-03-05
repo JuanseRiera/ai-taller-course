@@ -1,12 +1,13 @@
 import { useState } from "react";
 import Markdown from "react-markdown";
-import { Download, Check, Copy } from "lucide-react";
+import { Download, Check, Copy, AlertCircle } from "lucide-react";
 
 interface ReportViewProps {
   finalReport: string | null;
+  reportStatus?: "complete" | "draft" | null;
 }
 
-export function ReportView({ finalReport }: ReportViewProps) {
+export function ReportView({ finalReport, reportStatus = "complete" }: ReportViewProps) {
   const [copied, setCopied] = useState(false);
 
   if (!finalReport) return null;
@@ -35,10 +36,28 @@ export function ReportView({ finalReport }: ReportViewProps) {
 
   return (
     <div className="w-full max-w-4xl mx-auto animate-in fade-in zoom-in duration-300">
+      {reportStatus === "draft" && (
+        <div className="mb-4 rounded-md bg-orange-50 p-4 border border-orange-200 shadow-sm animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center">
+            <AlertCircle className="h-5 w-5 text-orange-400 mr-2" aria-hidden="true" />
+            <h3 className="text-sm font-medium text-orange-800">
+              Draft Report
+            </h3>
+          </div>
+          <div className="mt-1 ml-7 text-sm text-orange-700">
+            <p>This research was stopped before final approval (likely due to iteration limits). The content below is a draft.</p>
+          </div>
+        </div>
+      )}
+
       <div className="mb-6 flex justify-between items-center px-4">
         <h2 className="text-2xl font-bold tracking-tight text-gray-900 flex items-center gap-2">
-          <Check className="h-6 w-6 text-green-500" />
-          Research Complete
+          {reportStatus === "complete" ? (
+            <Check className="h-6 w-6 text-green-500" />
+          ) : (
+            <AlertCircle className="h-6 w-6 text-orange-500" />
+          )}
+          {reportStatus === "complete" ? "Research Complete" : "Research Draft"}
         </h2>
         <div className="flex gap-2">
           <button

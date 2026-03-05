@@ -17,6 +17,7 @@ export function useResearchStream() {
     currentAgent: null,
     currentPreview: "",
     finalReport: null,
+    reportStatus: null,
     conversationHistory: [],
     error: null,
   });
@@ -49,6 +50,7 @@ export function useResearchStream() {
       currentAgent: null,
       currentPreview: "",
       finalReport: null,
+      reportStatus: null,
       conversationHistory: [],
       error: null,
     });
@@ -60,6 +62,7 @@ export function useResearchStream() {
       currentAgent: null,
       currentPreview: "",
       finalReport: item.finalReport,
+      reportStatus: item.status,
       conversationHistory: item.conversationHistory,
       error: null,
     });
@@ -71,6 +74,7 @@ export function useResearchStream() {
       currentAgent: "Orchestrator",
       currentPreview: "Initializing agents...",
       finalReport: null,
+      reportStatus: null,
       conversationHistory: [],
       error: null,
     });
@@ -112,6 +116,7 @@ export function useResearchStream() {
                 timestamp: Date.now(),
                 question: request.question,
                 finalReport: result.data.final_report,
+                status: result.data.status,
                 conversationHistory: result.data.conversation_history,
               };
 
@@ -121,6 +126,7 @@ export function useResearchStream() {
                 ...prev,
                 status: "completed",
                 finalReport: result.data.final_report,
+                reportStatus: result.data.status,
                 conversationHistory: result.data.conversation_history,
               }));
               controller.abort();
