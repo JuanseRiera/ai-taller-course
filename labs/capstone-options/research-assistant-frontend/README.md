@@ -36,17 +36,40 @@ A professional, minimalist "Lab" style dashboard for an AI-driven research assis
    ```bash
    npm install
    ```
+4. **Create local environment file**:
+   ```bash
+   cp .env.example .env.local
+   ```
 
 ## 🖥️ Usage
 
 1. **Ensure the Backend is running**:
-   By default, the dashboard expects the backend at `http://localhost:8000/research`.
+   By default, the dashboard expects the backend base URL at `http://localhost:8000`.
+   You can override this with `NEXT_PUBLIC_API_BASE_URL` in `.env.local`.
 2. **Start the Development Server**:
    ```bash
    npm run dev
    ```
 3. **Open the Dashboard**:
    Navigate to [http://localhost:3000](http://localhost:3000) in your browser.
+
+## ⚙️ Environment Variables
+
+The project includes a tracked template file: `.env.example`.
+
+Available variables:
+
+- `NEXT_PUBLIC_API_BASE_URL`: Backend base URL used by the frontend.
+  - Default/example: `http://localhost:8000`
+  - The frontend appends `/research` internally.
+
+Recommended setup:
+
+```bash
+cp .env.example .env.local
+```
+
+Then update values for your local/staging environment.
 
 ## 📡 Data Contract
 

@@ -17,7 +17,7 @@ import {
 } from "../lib/errors";
 import { logger } from "../lib/logger";
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/research";
+const BACKEND_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
 const STREAM_TIMEOUT_MS = 60_000;
 
 function createInitialState(): ResearchState {
@@ -158,7 +158,7 @@ export function useResearchStream() {
       try {
         resetTimeout();
 
-        await fetchEventSource(BACKEND_URL, {
+        await fetchEventSource(`${BACKEND_BASE_URL}/research`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
