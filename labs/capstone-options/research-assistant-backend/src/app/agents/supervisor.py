@@ -34,6 +34,7 @@ class SupervisorAgent(AssistantAgent):
       }
     }
     Note: Set "status" to "complete" ONLY if the final agent explicitly approved it. Otherwise, set it to "draft".
+    CRITICAL: The JSON must be perfectly valid. If the report contains markdown like tables or code blocks, you MUST properly escape all newlines as \\n and double quotes as \\" inside the "final_report" string. Do not use literal newlines inside the JSON string.
     """
 
     def __init__(self, name: str, llm_config: Dict[str, Any], **kwargs):

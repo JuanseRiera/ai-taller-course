@@ -245,8 +245,18 @@ class ResearchOrchestrator:
                         metadata = parsed.get("metadata", {})
                     else:
                         final_report_text = str(parsed)
-                except:
-                    final_report_text = content # Fallback to raw text
+                except Exception as e:
+                    # If parsing fails (often due to unescaped markdown tables or newlines), extract safely
+                    import re
+                    match = re.search(r'"final_report"\s*:\s*"(.*?)"(?=\s*(?:,\s*"\w+"\s*:|\s*}))', content, re.DOTALL)
+                    if match:
+                        # Extract and unescape common json sequences to make it renderable
+                        raw_text = match.group(1)
+                        final_report_text = raw_text.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
+                        status = "complete" if '"status": "complete"' in content else "draft"
+                        metadata = {}
+                    else:
+                        final_report_text = content # Fallback to raw text
             else:
                 # If stopped early, use Writer's last output if available
                 for m in reversed(messages):
