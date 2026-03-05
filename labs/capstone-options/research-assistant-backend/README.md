@@ -145,6 +145,31 @@ curl -N -X POST http://localhost:8000/research \
   }'
 ```
 
+## Running Tests
+
+We have a comprehensive test suite covering unit, integration, and end-to-end (E2E) scenarios.
+
+### Running All Tests (Unit, Integration, E2E)
+To run all tests, including the live E2E tests which require a valid `GOOGLE_API_KEY`, use the following command:
+
+```bash
+RUN_E2E=1 GOOGLE_API_KEY=your_actual_api_key python3 -m pytest -v
+```
+
+### Running Fast Tests (Unit and Integration Only)
+For quick feedback during development, you can run only the unit and integration tests (which use mocks and do not hit the live API):
+
+```bash
+python3 -m pytest tests/unit tests/integration -v
+```
+
+### Running End-to-End (E2E) Tests Separately
+E2E tests verify the full system with live API calls. They are skipped by default. To run them:
+
+```bash
+RUN_E2E=1 GOOGLE_API_KEY=your_actual_api_key python3 -m pytest tests/e2e -v
+```
+
 ### Project Structure
 - `src/app/agents/`: Individual agent definitions (Researcher, Writer, Reviewer, Supervisor).
 - `src/app/core/orchestrator.py`: AutoGen GroupChat and streaming logic.
