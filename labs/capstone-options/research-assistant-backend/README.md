@@ -9,6 +9,45 @@ It features a multi-agent system (Researcher, Writer, Reviewer, Supervisor) orch
 - **Real-time Streaming**: Server-Sent Events (SSE) for live agent progress updates.
 - **Configurable**: Adjustable depth, format, and iterations.
 
+## How it Works
+
+The system uses a flexible, plan-ahead orchestration model to manage the multi-agent workflow efficiently without exceeding the iteration budget:
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant Orch as Orchestrator
+    participant Sup as Supervisor
+    participant Agents as Functional Agents (Researcher, Writer, Reviewer, etc.)
+
+    User->>Orch: POST /research (question, max_iterations)
+    
+    Note over Orch, Sup: Phase 1: Strategic Planning
+    Orch->>Sup: Provide AGENT_REGISTRY & Budget
+    Sup->>Orch: Returns PLAN (e.g., "PLAN: Researcher -> Writer -> Reviewer")
+    
+    Note over Orch, Agents: Phase 2: Auto-Execution
+    loop For each agent in PLAN (while budget > 0)
+        Orch->>Agents: Route to Next Agent
+        Agents-->>Orch: Task Output (decrements budget)
+    end
+    
+    Note over Orch, Sup: Phase 3: Evaluation & Finalization
+    alt Agent outputs REJECT (and budget > 0)
+        Orch->>Sup: Provide Feedback
+        Sup->>Orch: Returns NEW PLAN (e.g., "PLAN: Writer")
+    else Agent outputs APPROVE or Budget Exhausted
+        Orch->>Sup: Request Final JSON
+        Sup->>Orch: Final Report (status: "complete" or "draft")
+        Orch-->>User: Stream Result
+    end
+```
+
+### Key Concepts
+- **Dynamic Registry**: Adding a new agent is as simple as defining it in the `AGENT_REGISTRY`. The Supervisor automatically discovers it and can include it in its plans.
+- **Budget Awareness**: The Supervisor actively manages the `max_iterations`. If the budget is low (e.g., `2`), it will skip optional agents (like the Reviewer) and output a shorter plan (e.g., `PLAN: Researcher -> Writer`) to ensure a draft is completed.
+- **Auto-Execution**: Once a plan is set, the Orchestrator routes messages between functional agents automatically, saving time and LLM costs by skipping redundant Supervisor checks.
+
 ## Prerequisites
 
 - Python 3.9+

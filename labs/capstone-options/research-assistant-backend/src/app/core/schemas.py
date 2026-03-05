@@ -9,5 +9,6 @@ class ResearchRequest(BaseModel):
 
 class ResearchResponse(BaseModel):
     final_report: str
+    status: Literal["complete", "draft"]
     metadata: Dict[str, Any]
     logs: List[Dict[str, Any]]
