@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from .core.schemas import ResearchRequest
@@ -22,12 +22,15 @@ from .utils.logger import get_logger
 logger = get_logger(__name__)
 
 @app.post("/research")
-async def research(request: ResearchRequest):
+async def research(request: ResearchRequest, http_request: Request):
     """
     Starts a research session with orchestrated agents.
     Returns a stream of agent interactions and the final report.
     """
-    logger.info(f"Received research request: {request.question[:50]}... (Timeout: {request.timeout}s)")
+    trace_id = http_request.headers.get("x-trace-id", "not-provided")
+    logger.info(
+        f"Received research request [trace_id={trace_id}]: {request.question[:50]}... (Timeout: {request.timeout}s)"
+    )
     try:
         orchestrator = ResearchOrchestrator(request)
         
@@ -36,7 +39,7 @@ async def research(request: ResearchRequest):
             media_type="text/event-stream"
         )
     except Exception as e:
-        logger.error(f"Failed to start research: {e}")
+        logger.error(f"Failed to start research [trace_id={trace_id}]: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/health")

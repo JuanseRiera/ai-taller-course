@@ -16,6 +16,8 @@ downloads/
 eggs/
 .eggs/
 lib/
+!labs/capstone-options/research-assistant-frontend/src/lib/
+!labs/capstone-options/research-assistant-frontend/src/lib/**
 lib64/
 parts/
 sdist/

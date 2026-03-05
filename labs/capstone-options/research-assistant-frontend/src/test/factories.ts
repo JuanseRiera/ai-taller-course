@@ -51,14 +51,19 @@ export const createMockHistoryItem = (
 
 export const createMockResearchState = (
   overrides: Partial<ResearchState> = {}
-): ResearchState => ({
-  id: null,
-  status: "idle",
-  currentAgent: null,
-  currentPreview: "",
-  finalReport: null,
-  reportStatus: null,
-  conversationHistory: [],
-  error: null,
-  ...overrides,
-});
+): ResearchState => {
+  const { traceId, ...rest } = overrides;
+
+  return {
+    id: null,
+    status: "idle",
+    currentAgent: null,
+    currentPreview: "",
+    traceId: traceId ?? null,
+    finalReport: null,
+    reportStatus: null,
+    conversationHistory: [],
+    error: null,
+    ...rest,
+  };
+};

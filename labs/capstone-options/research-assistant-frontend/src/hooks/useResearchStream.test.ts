@@ -13,6 +13,7 @@ jest.mock("@microsoft/fetch-event-source", () => ({
 
 jest.mock("../lib/utils", () => ({
   generateId: jest.fn(() => "mock-generated-id"),
+  generateTraceId: jest.fn(() => "trace-test-123"),
 }));
 
 const mockedFetchEventSource = jest.mocked(fetchEventSource);
@@ -72,8 +73,15 @@ describe("useResearchStream", () => {
     expect(result.current.state.currentAgent).toBe("Researcher");
     expect(result.current.state.finalReport).toBe("# Completed report");
     expect(result.current.state.id).toBe("mock-generated-id");
+    expect(result.current.state.traceId).toBe("trace-test-123");
     expect(result.current.history).toHaveLength(1);
     expect(result.current.history[0].question).toBe(request.question);
+    expect(mockedFetchEventSource).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({ "X-Trace-Id": "trace-test-123" }),
+      })
+    );
   });
 
   it("sets error state when stream throws", async () => {
@@ -91,7 +99,11 @@ describe("useResearchStream", () => {
       expect(result.current.state.status).toBe("error");
     });
 
-    expect(result.current.state.error).toBe("Backend unavailable");
+    expect(result.current.state.error).toMatchObject({
+      code: "UNKNOWN_ERROR",
+      traceId: "trace-test-123",
+      userMessage: "Something went wrong. Please try again.",
+    });
   });
 
   it("deletes history item and resets active state when deleted id is selected", async () => {
