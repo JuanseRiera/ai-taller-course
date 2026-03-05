@@ -1,3 +1,7 @@
+from src.app.utils.logger import get_logger
+
+logger = get_logger(__name__)
+
 try:
     from src.app.agents.researcher import ResearcherAgent
     from src.app.agents.writer import WriterAgent
@@ -8,6 +12,6 @@ try:
     from src.app.main import app
     import google.generativeai as genai
     import autogen
-    print("All imports successful")
+    logger.info("All imports successful")
 except Exception as e:
-    print(f"Import error: {e}")
+    logger.error(f"Import error: {e}")

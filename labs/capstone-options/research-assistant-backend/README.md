@@ -163,6 +163,13 @@ For quick feedback during development, you can run only the unit and integration
 python3 -m pytest tests/unit tests/integration -v
 ```
 
+### Logging and Configuration Tests
+Dedicated tests cover the centralized logging utilities. Run them with:
+
+```bash
+python3 -m pytest tests/unit/test_utils_config_logger.py
+```
+
 ### Running End-to-End (E2E) Tests Separately
 E2E tests verify the full system with live API calls. They are skipped by default. To run them:
 

@@ -1,16 +1,23 @@
 import asyncio
 import json
-import asyncio
+import re
+import uuid
 from typing import Dict, Any, Union, List, AsyncGenerator
+
 from autogen import GroupChat, GroupChatManager, Agent, AssistantAgent, UserProxyAgent
 from ..agents.factory import AgentFactory
 from ..utils.config import Config
 from ..utils.logger import get_logger
 from .schemas import ResearchRequest
 from .workflow_config import AGENT_REGISTRY
-import re
 
 logger = get_logger(__name__)
+
+def _summarize_text(content: str, limit: int = 160) -> str:
+    if not content:
+        return "<empty>"
+    normalized = " ".join(content.split())
+    return normalized if len(normalized) <= limit else f"{normalized[:limit]}..."
 
 class ResearchOrchestrator:
     def __init__(self, request: ResearchRequest):
@@ -28,6 +35,17 @@ class ResearchOrchestrator:
         self.retry_tracker = {} # Track retries per agent
         self.salvage_mode = False # Flag for timeout handling
         self.last_failure_alert = "" # Pass messages to Supervisor
+        self.session_id = uuid.uuid4().hex[:8]
+        question_snippet = _summarize_text(self.request.question, limit=120)
+        logger.info(
+            "Session %s: initializing research (depth=%s format=%s max_iterations=%d timeout=%ds) question=%s",
+            self.session_id,
+            self.request.depth,
+            self.request.report_format,
+            self.request.max_iterations,
+            self.request.timeout,
+            question_snippet
+        )
 
     def _state_transition(self, last_speaker: Agent, groupchat: GroupChat) -> Union[Agent, str, None]:
         """
@@ -49,6 +67,21 @@ class ResearchOrchestrator:
                 pass
 
         messages = groupchat.messages
+        last_speaker_name = last_speaker.name if last_speaker else "None"
+        logger.debug(
+            "Session %s: state transition (last_speaker=%s plan_index=%d)",
+            self.session_id,
+            last_speaker_name,
+            self.plan_index
+        )
+        if last_speaker and messages:
+            snippet = _summarize_text(messages[-1].get("content", ""))
+            logger.info(
+                "Session %s: %s responded -> %s",
+                self.session_id,
+                last_speaker.name,
+                snippet
+            )
         
         # Calculate functional iterations dynamically
         func_agents_keys = [k for k in self.agents_dict.keys() if k != "supervisor"]
@@ -89,10 +122,26 @@ class ResearchOrchestrator:
                 if self.current_plan:
                     self.plan_index = 0
                     next_agent = self.current_plan[0]
+                    plan_names = [agent.name for agent in self.current_plan]
+                    logger.info(
+                        "Session %s: Supervisor plan accepted -> %s",
+                        self.session_id,
+                        " -> ".join(plan_names)
+                    )
                 else:
                     # Invalid plan parsed, fallback to supervisor to fix
+                    logger.warning(
+                        "Session %s: Supervisor plan could not be mapped to agents: %s",
+                        self.session_id,
+                        plan_str
+                    )
                     next_agent = self.agents_dict["supervisor"]
             else:
+                logger.info(
+                    "Session %s: Supervisor did not output a PLAN (remaining=%d)",
+                    self.session_id,
+                    remaining
+                )
                 if remaining <= 0:
                     return None
                 next_agent = self.agents_dict["supervisor"] # Re-prompt for plan or final json
@@ -140,14 +189,30 @@ class ResearchOrchestrator:
                 self.plan_index += 1
                 if self.plan_index < len(self.current_plan) and remaining > 0:
                     # Continue with the planned sequence automatically
+                    logger.info(
+                        "Session %s: continuing plan with %s (step %d/%d)",
+                        self.session_id,
+                        self.current_plan[self.plan_index].name,
+                        self.plan_index + 1,
+                        len(self.current_plan)
+                    )
                     next_agent = self.current_plan[self.plan_index]
                 else:
                     # Plan sequence finished, or we ran out of budget
+                    logger.info(
+                        "Session %s: plan completed (remaining=%d). Escalating to Supervisor.",
+                        self.session_id,
+                        remaining
+                    )
                     self.current_plan = []
                     self.plan_index = -1
                     next_agent = self.agents_dict["supervisor"]
 
         if not next_agent:
+            logger.warning(
+                "Session %s: unable to pick next agent, defaulting to Supervisor.",
+                self.session_id
+            )
             next_agent = self.agents_dict["supervisor"] # Fallback
 
         # Inject budget status to Supervisor before its turn
@@ -183,6 +248,12 @@ class ResearchOrchestrator:
                 status_prompt += "\n[ALERT: BUDGET EXHAUSTED. You MUST output the final JSON report now. Do not output PLAN:. Set status to 'draft' if not approved.]"
                     
             next_agent.update_system_message(base_prompt + status_prompt)
+            logger.debug(
+                "Session %s: Supervisor system prompt refreshed (remaining=%d, salvage=%s)",
+                self.session_id,
+                remaining,
+                self.salvage_mode
+            )
 
         # 3. Emit 'started' event with descriptive activity for the NEXT agent
         activity_map = {
@@ -198,6 +269,11 @@ class ResearchOrchestrator:
                 "type": "progress",
                 "message": f"{next_agent.name} has started {activity}"
             })
+            logger.debug(
+                "Session %s: queued progress event for %s",
+                self.session_id,
+                next_agent.name
+            )
         except Exception:
             pass 
 
@@ -207,6 +283,11 @@ class ResearchOrchestrator:
         """
         Main execution method. Initializes the chat and streams results.
         """
+        logger.info(
+            "Session %s: run_research started (timeout=%ds)",
+            self.session_id,
+            self.request.timeout
+        )
         
         # 1. Create GroupChat
         user_proxy = UserProxyAgent(
@@ -234,6 +315,10 @@ class ResearchOrchestrator:
 
         async def _run_chat_task():
             try:
+                logger.info(
+                    "Session %s: user proxy initiating chat",
+                    self.session_id
+                )
                 await asyncio.wait_for(
                     user_proxy.a_initiate_chat(
                         manager,
@@ -241,9 +326,17 @@ class ResearchOrchestrator:
                     ),
                     timeout=self.request.timeout
                 )
+                logger.info(
+                    "Session %s: user proxy chat completed",
+                    self.session_id
+                )
             except asyncio.TimeoutError:
                 self.salvage_mode = True
-                logger.error(f"Session timeout reached ({self.request.timeout}s). Initiating Salvage Mode.")
+                logger.warning(
+                    "Session %s: timeout reached (%ds). Initiating Salvage Mode.",
+                    self.session_id,
+                    self.request.timeout
+                )
                 
                 # Manually trigger Supervisor salvage outside GroupChat manager
                 if self.groupchat:
@@ -272,15 +365,26 @@ class ResearchOrchestrator:
             try:
                 # Wait for new message or task completion
                 message = await asyncio.wait_for(self.message_queue.get(), timeout=1.0)
+                logger.debug(
+                    "Session %s: streaming event %s",
+                    self.session_id,
+                    message.get("type")
+                )
                 yield f"data: {json.dumps(message)}\n\n"
             except asyncio.TimeoutError:
                 continue
             except asyncio.CancelledError:
-                logger.info("Client disconnected. Cancelling background task.")
+                logger.info(
+                    "Session %s: client disconnected. Cancelling background task.",
+                    self.session_id
+                )
                 task.cancel()
                 raise # Close stream
             except Exception as e:
-                logger.error(f"Error while streaming: {e}")
+                logger.exception(
+                    "Session %s: error while streaming",
+                    self.session_id
+                )
                 yield f"data: {json.dumps({'type': 'error', 'message': str(e)})}\n\n"
                 break
         
@@ -291,7 +395,10 @@ class ResearchOrchestrator:
         except asyncio.CancelledError:
             pass
         except Exception as e:
-            logger.error(f"Error checking task exception: {e}")
+            logger.exception(
+                "Session %s: error checking background task",
+                self.session_id
+            )
         
         # Flush remaining messages
         while not self.message_queue.empty():
@@ -325,8 +432,10 @@ class ResearchOrchestrator:
                     else:
                         final_report_text = str(parsed)
                 except Exception as e:
-                    # If parsing fails (often due to unescaped markdown tables or newlines), extract safely
-                    import re
+                    logger.exception(
+                        "Session %s: failed to parse Supervisor final JSON",
+                        self.session_id
+                    )
                     match = re.search(r'"final_report"\s*:\s*"(.*?)"(?=\s*(?:,\s*"\w+"\s*:|\s*}))', content, re.DOTALL)
                     if match:
                         # Extract and unescape common json sequences to make it renderable
@@ -338,6 +447,10 @@ class ResearchOrchestrator:
                         final_report_text = content # Fallback to raw text
             else:
                 # If stopped early, use Writer's last output if available
+                logger.info(
+                    "Session %s: final Supervisor message missing; falling back to Writer output",
+                    self.session_id
+                )
                 for m in reversed(messages):
                     if m["name"] == "Writer":
                         final_report_text = m["content"]
@@ -367,6 +480,12 @@ class ResearchOrchestrator:
                 "metadata": metadata
             }
         }
+        logger.info(
+            "Session %s: final response ready (status=%s iterations=%d)",
+            self.session_id,
+            status,
+            len(messages)
+        )
 
         yield f"data: {json.dumps(final_response)}\n\n"
         yield "event: close\ndata: [DONE]\n\n"

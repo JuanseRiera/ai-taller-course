@@ -17,7 +17,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-import logging
 from .utils.logger import get_logger
 
 logger = get_logger(__name__)

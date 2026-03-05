@@ -1,8 +1,11 @@
 from typing import Dict, Any, List
+from ..utils.logger import get_logger
 from .researcher import ResearcherAgent
 from .writer import WriterAgent
 from .reviewer import ReviewerAgent
 from .supervisor import SupervisorAgent
+
+logger = get_logger(__name__)
 
 class AgentFactory:
     """
@@ -15,6 +18,11 @@ class AgentFactory:
         Creates instances of Researcher, Writer, Reviewer, and Supervisor.
         Injects specific prompts based on depth/format.
         """
+        logger.info(
+            "Configuring agents (depth=%s format=%s)",
+            depth,
+            report_format
+        )
         
         # 1. Supervisor (Orchestrator/Planner)
         supervisor = SupervisorAgent(
