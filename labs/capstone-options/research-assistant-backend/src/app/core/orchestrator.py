@@ -123,16 +123,22 @@ class ResearchOrchestrator:
             status_prompt = f"\n\n[SYSTEM STATUS: You have {remaining} functional iterations remaining out of {self.request.max_iterations}.]"
             status_prompt += f"\n[AVAILABLE AGENTS:\n{registry_str}\n]"
             
-            if remaining <= 0:
-                status_prompt += "\nBUDGET EXHAUSTED. You MUST output the final JSON report now. Do not output PLAN:. Set status to 'draft' if not approved."
-            elif last_speaker.name not in ["User", "Supervisor"]:
+            if last_speaker.name not in ["User", "Supervisor"]:
                 content = messages[-1].get("content", "")
-                if "REJECT" in content:
-                    status_prompt += "\n[ALERT: The previous draft was REJECTED. Evaluate the feedback and provide a NEW PLAN to fix the issues, or finalize as draft if budget is too low.]"
-                elif "APPROVE" in content:
-                     status_prompt += "\n[ALERT: The draft was APPROVED! You MUST output the final JSON report now. Set status to 'complete'.]"
+                if "APPROVE" in content:
+                    status_prompt += "\n[ALERT: The draft was APPROVED! You MUST output the final JSON report now. Set status to 'complete'.]"
+                elif "REJECT" in content:
+                    if remaining <= 0:
+                        status_prompt += "\n[ALERT: BUDGET EXHAUSTED after REJECTION. You MUST output the final JSON report now. Do not output PLAN:. Set status to 'draft'.]"
+                    else:
+                        status_prompt += "\n[ALERT: The previous draft was REJECTED. Evaluate the feedback and provide a NEW PLAN to fix the issues, or finalize as draft if budget is too low.]"
                 else:
-                    status_prompt += "\n[ALERT: The previous PLAN completed without final approval. Provide a NEW PLAN to continue the work, or finalize as draft if appropriate.]"
+                    if remaining <= 0:
+                        status_prompt += "\n[ALERT: BUDGET EXHAUSTED without final approval. You MUST output the final JSON report now. Do not output PLAN:. Set status to 'draft'.]"
+                    else:
+                        status_prompt += "\n[ALERT: The previous PLAN completed without final approval. Provide a NEW PLAN to continue the work, or finalize as draft if appropriate.]"
+            elif remaining <= 0:
+                status_prompt += "\n[ALERT: BUDGET EXHAUSTED. You MUST output the final JSON report now. Do not output PLAN:. Set status to 'draft' if not approved.]"
                     
             next_agent.update_system_message(base_prompt + status_prompt)
 
